@@ -1,0 +1,193 @@
+---
+title: "A First Glance Analysis of German EEX Power Market"
+author: "Jacob S Townson"
+date: "May 17, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(dplyr)
+require(xlsx)
+require(lubridate)
+require(ggplot2)
+
+
+if(exists("solar") == FALSE){
+solar = read.csv("./Datafiles/Solar.csv",header = TRUE)
+}
+
+
+if(exists("wind") == FALSE){
+wind = read.csv("./Datafiles/Wind.csv",header = TRUE)
+}
+
+
+
+if(exists("emission_allowance") == FALSE){
+emission_allowance = read.xlsx("./Datafiles/emission_spot_historie_2013.xls", 
+                     sheetIndex=1,header=TRUE,startRow=2)
+}
+
+if(exists("emission_reductions") == FALSE){
+emission_reductions = read.xlsx("./Datafiles/emission_spot_historie_2013.xls", 
+                     sheetIndex=2,header=TRUE,startRow=2)
+}
+
+if(exists("emission_auction") == FALSE){
+emission_auction = read.xlsx("./Datafiles/emission_spot_historie_2013.xls", 
+                     sheetIndex=3,header=TRUE,startRow=2)
+emission_auction$Auction.Time = format(emission_auction$Auction.Time, 
+                     "%H:%M:%S")
+}
+
+
+if(exists("energy_prices") == FALSE){
+energy_prices = read.xlsx("./Datafiles/energy_spot_historie_2013.xls", 
+                     sheetIndex=1,header=TRUE,startRow=3)
+}
+
+if(exists("energy_volumes") == FALSE){
+energy_volumes = read.xlsx("./Datafiles/energy_spot_historie_2013.xls", 
+                     sheetIndex=2,header=TRUE,startRow=2)
+}
+
+
+if(exists("NEI") == FALSE){
+gas_ref.price = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=1,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.ncg") == FALSE){
+gas_market.ncg = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=2,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.ncg.1mw") == FALSE){
+gas_market.ncg.1mw = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=3,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.ncg.day") == FALSE){
+gas_market.ncg.day = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=4,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.gaspool") == FALSE){
+gas_market.gaspool = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=5,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.gaspool.1mw") == FALSE){
+gas_market.gaspool.1mw = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=6,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.gaspool.day") == FALSE){
+gas_market.gaspool.day = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=7,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.ttf") == FALSE){
+gas_market.ttf = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=8,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.ttf.1mw") == FALSE){
+gas_market.ttf.1mw = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=9,header=TRUE,startRow=2)
+}
+
+if(exists("gas_market.ttf.day") == FALSE){
+gas_market.ttf.day = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
+                     sheetIndex=10,header=TRUE,startRow=2)
+}
+
+
+if(exists("heating1") == FALSE){
+heating1 = read.xlsx("./Datafiles/HeatingDegrees.xlsx", 
+                     sheetIndex=1,header=TRUE,startRow=NULL)
+}
+
+if(exists("heating2") == FALSE){
+heating2 = read.xlsx("./Datafiles/HeatingDegrees.xlsx", 
+                     sheetIndex=2,header=TRUE,startRow=NULL)
+}
+```
+
+# Introduction
+
+This paper covers my observations and analysis of the data given to me by Josef Spalenka of Genscape in order to determine my qualifications for a position at Genscape. The data used in this document is used in the German day-ahead power market called "EEX". It contains the power prices, fuel prices, emission prices, heating degrees, and wind and solar forecasts for the next day. 
+
+My goals with this data are to first and foremost, understand what exactly is this data presenting us with. Then, I will make some code to read in this data to make it usable in R. Then, I will look to see if there are any interesting correlations and relationships to be found in the data. I will present my findings here, and make conclusions based off of them. 
+
+# The Data
+
+The data given to me was split into 7 files, and some excel files with more sheets than others. My goal here is to explain precisely what this data is telling us, then to explore what possible correlations and relationships we may be able to find. 
+
+### Coal Future Data
+
+In this section we will be exploring the file "coal_futures_historie_2013.xls". This excel file has 8 sheets. The first tells us most of what we need to know, and that's that coal seems to be phasing out from the German market, if it already hasn't been now that we are well past 2013. The second sheet indicates similarly with it's page full of zeros. 
+
+The rest of the sheets in this excel file show the 2013 data for specific contracts and their trade unit along with prices. These bits of data make me curious, as the previously mentioned sheets seem to indicate that there were no trades through the year, however these sheets show the monthly, quarterly, and yearly trade units with their settlement prices. I can only assume this means that these prices are the prices that the trade units cost, however no contracts for these units were made.
+
+Since we can see that most of this data is just zeros, we will ignore it from here. However, I would like to understand more of what exactly these datasets are saying, especially the differences between the "Coal-Futures Total" sheets and the contract sheets afterwards. Maybe if offered the job, I can learn more about these things!
+
+### Emission History
+
+This dataset gives the emission prices based on specific contracts and their emission volumes. This excel file has 3 sheets, first explaining the contracts' emission allowance, the next showing reductions, and the final showing the market auction information. 
+
+For the most part, this dataset is relatively clear in what it shows, however in the market auction sheet, we are given a column labeled "auction details". For my purposes, this information will be ignored as without more former knowledge of the system, I will not be able to accurately try to analyze anything about it. 
+
+For curiosity's sake, let's quickly look at the emission allowance data, and compare the settlement price with the total volume of emissions. We will use the "emission_allowance" dataframe I created in R to do this quickly
+
+```{r fig.height=4}
+em_price = emission_allowance$Settlement.Price.EUR.EUA
+em_vol = emission_allowance$Daily.Total.Volume..incl..OTC.
+em_cont = emission_allowance$Contract
+qplot(em_vol,em_price, xlab = 'Daily Total Volume', ylab = 'Settlement Price', 
+      main = 'Volume vs. Price')
+```
+
+It's clear there are some outliers here, so for now, let's remove them and see what the plot looks like then. 
+
+```{r}
+allow = data.frame(em_price,em_vol,em_cont)
+allow = arrange(allow, desc(em_vol))
+head(allow)
+```
+
+So from here we can see our outliers, and now we can remove them accordingly.
+
+```{r fig.height=4}
+allow = filter(allow, em_vol < 1061000)
+qplot(em_vol,em_price, data = allow, xlab = 'Daily Total Volume', ylab = 'Settlement Price', 
+      main = 'Volume vs. Price')
+```
+
+This plot still seems fairly noisy. Perhaps we should divide the information by contract to see if that has something to do with the noise in price. There are two types of contracts in this dataset, EAAC, and EUSP. 
+
+
+```{r fig.height=4}
+qplot(em_vol,em_price, data = allow, xlab = 'Daily Total Volume', ylab = 'Settlement Price', 
+      main = 'Volume vs. Price', facets = .~em_cont)
+```
+
+This seems to show just more noise, no correlation seems to show for this information. So let's move on!
+
+
+### Gas History
+
+This dataset is by far the most dense of any of them all. With 10 sheets, it has a lot of information to offer. 
+
+### Heating Degrees
+
+### Wind and Solar Forecasts
+
+### Power Prices (energy_spot)
+
+# Analysis
+
+# Conclusions
+
+# Appendix
