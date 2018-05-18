@@ -55,9 +55,12 @@ energy_volumes = read.xlsx("./Datafiles/energy_spot_historie_2013.xls",
 
 
 
-# Note NCG is NetConnect Germany. Still somewhat unclear on what
-# exactly the differences are in these datasets. Will return.
-# What are NCG, GASPOOL, and TTF? Questions to be answered.
+# The following sheets give us data on what I have understood 
+#to be 3 European gas companies/traders, NCG (NetConnect 
+#Germany), GASPOOL, and TTF (Title Transfer Facility). For 
+#each one, we get the market information for the whole 2013 
+#year. This has their number of trades, price information, and 
+#volume traded for every day. 
 
 gas_ref.price = read.xlsx("./Datafiles/gas_spot_historie_2013.xls", 
                      sheetIndex=1,header=TRUE,startRow=2)
