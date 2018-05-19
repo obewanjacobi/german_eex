@@ -94,8 +94,9 @@ gas_market.ttf.day = read.xlsx("./Datafiles/gas_spot_historie_2013.xls",
 
 
 
-# What separates these two datasets is unclear. Will look into 
-# further.
+# These two sheets contain data for heating energy. The first
+# sheet covers from 12/30/09 - 7/31/13, and the second covers
+# from 8/1/2013 - 1/6/2014.
 
 heating1 = read.xlsx("./Datafiles/HeatingDegrees.xlsx", 
                      sheetIndex=1,header=TRUE,startRow=NULL)
